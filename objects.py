@@ -249,7 +249,7 @@ class Simulation:
             if gravity:
                 done_objects = []
                 for now_object in self.objects.copy():
-                    for influence_object in self.objects:
+                    for influence_object in self.objects.copy():
                         if influence_object is not now_object and not {now_object, influence_object} in done_objects:
                             done_objects.append({now_object, influence_object})
 
@@ -263,8 +263,10 @@ class Simulation:
                             inf_a = f / -influence_object.mass
 
                             now_object.acceleration = now_a
+                            now_object.velocity += now_object.acceleration * dt
 
                             influence_object.acceleration = inf_a
+                            influence_object.velocity += influence_object.acceleration * dt
 
             if collision:
                 done_objects = []

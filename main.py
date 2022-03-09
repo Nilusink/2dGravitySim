@@ -16,7 +16,7 @@ DISTANCE_COLOR = (255, 0, 0, 128)
 SCALE = 1*10**(-8)
 
 # how many "fake" seconds one real second represents
-TIME_SCALE = 1
+TIME_SCALE = 100_000_000
 
 # graphics configuration
 FOLLOW_CENTER = False   # can be toggled by pressing f
@@ -137,7 +137,7 @@ def main() -> None:
         now = time.perf_counter()
         dt = now-start
         if not PAUSE:
-            sim.iter((dt)*TIME_SCALE, gravity=GRAVITY, collision=COLLISION)
+            sim.iter((dt)*TIME_SCALE, gravity=GRAVITY, collision=COLLISION, precision=3)
         start = now
 
         # draw objects
