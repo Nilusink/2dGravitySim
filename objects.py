@@ -135,7 +135,11 @@ class Vector:
         return np.sqrt(self.x**2 + self.y**2)
 
     def __repr__(self) -> str:
-        return f"<Vector: x={self.x}, y={self.y}>"
+        return f"<\n" \
+               f"\tVector:\n" \
+               f"\tx:{self.x}\ty:{self.y}\n" \
+               f"\tangle:{self.angle}\tlength:{self.length}\n" \
+               f">"
 
 
 class BasicObject:
@@ -281,7 +285,6 @@ class Simulation:
                                 # check if they touch
                                 if delta.length < now_object.diameter/2 + influence_object.diameter/2 and not now_object in done_objects\
                                         and not any([{now_object, influence_object} in self.__last_collided[i] for i in range(len(self.__last_collided))]):
-                                    print(f"collision: {now_object.name} + {influence_object.name}, {delta.length=}, {delta.angle=}")
                                     # v1' = (m1*v1 + m2*(2*v2-v1)) / (m1+m2)
                                     #
                                     done_objects += [now_object, influence_object]
@@ -295,8 +298,6 @@ class Simulation:
                                     a = (delta.angle-influence_object.velocity.angle)
                                     inf_carry = Vector.from_polar(angle=delta.angle-PI/2, length=influence_object.velocity.length*np.sin(a))
                                     inf_collision = Vector.from_polar(angle=delta.angle, length=influence_object.velocity.length*np.cos(a))
-
-                                    print(f"{now_carry.angle*(180/PI)=}, {now_collision.angle*(180/PI)=}\n{inf_carry.angle*(180/PI)=}, {inf_collision.angle*(180/PI)=}")
 
                                     now_v = now_collision.length * now_object.mass
                                     now_v += (inf_collision.length * 2 - now_collision.length) * influence_object.mass

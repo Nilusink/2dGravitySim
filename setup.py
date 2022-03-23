@@ -1,6 +1,6 @@
 from objects import Planet, Vector, PI, AU
 
-objects = [
+objects1 = [
     # solar system setup
     Planet(name="Sun", diameter=2*696342000, mass=1.9885e+30, position=Vector(), fixed=False),
     Planet(name="Mercury", diameter=2*2439700, mass=3.3011e+23,
@@ -29,21 +29,29 @@ objects = [
            velocity=Vector.from_polar(angle=PI / 2, length=5430))
 ]
 
+
 # rename for another test  (timescale ing main.py should be changed!)
-objects1 = [
-    Planet(name="1", diameter=1, mass=500_000_000,
+objects = [
+    Planet(name="1", diameter=1, mass=800_000_000,
            position=Vector.from_cartesian(0, 0)),
-    Planet(name="2", diameter=1, mass=500_000_000,
-           position=Vector.from_cartesian(2, 0)),
-    Planet(name="3", diameter=2, mass=5_000_000_000,
-           position=Vector.from_cartesian(2, 5))
+    Planet(name="2", diameter=1, mass=800_000_000,
+           position=Vector.from_cartesian(2, 0))
 ]
 
-objects2 = [
+
+objects3 = [
     Planet(name="1", diameter=0.5, mass=2, position=Vector.from_cartesian(-1, 0),
            velocity=Vector.from_polar(angle=0, length=1)),
 
-    Planet(name="2", diameter=0.5, mass=4, position=Vector.from_cartesian(0, 0)),
+    Planet(name="2", diameter=0.5, mass=2, position=Vector.from_cartesian(0, 0)),
     Planet(name="2", diameter=0.5, mass=2, position=Vector.from_cartesian(0.5, 0)),
     Planet(name="2", diameter=0.5, mass=2, position=Vector.from_cartesian(1, 0))
+]
+
+
+objects4 = [
+    Planet(name="1", diameter=1.2, mass=4, position=Vector(),
+           velocity=Vector.from_cartesian(1, -1)),
+    Planet(name="2", diameter=1, mass=2, position=Vector.from_cartesian(0, -3),
+           velocity=Vector.from_cartesian(1, 0))
 ]

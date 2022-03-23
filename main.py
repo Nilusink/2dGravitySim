@@ -1,4 +1,5 @@
 from objects import Vector, Simulation, Planet, BasicObject
+from threading import Thread
 from setup import objects
 import pygame as pg
 import time
@@ -16,7 +17,7 @@ DISTANCE_COLOR = (255, 0, 0, 128)
 SCALE = 1*10**(-8)
 
 # how many "fake" seconds one real second represents
-TIME_SCALE = 100_000_000
+TIME_SCALE = 1
 
 # graphics configuration
 FOLLOW_CENTER = False   # can be toggled by pressing f
@@ -132,109 +133,127 @@ def main() -> None:
 
     start = time.perf_counter()
     offset = calculate_offset(sim.gravity_center*SCALE)
-    while True:
-        # calculate physics
-        now = time.perf_counter()
-        dt = now-start
-        if not PAUSE:
-            sim.iter((dt)*TIME_SCALE, gravity=GRAVITY, collision=COLLISION, precision=3)
-        start = now
 
-        # draw objects
-        screen.fill(BLACK)
-        surface0.fill(BLACK)
-        surface1.fill((0, 0, 0, 0))
-        surface2.fill((0, 0, 0, 0))
-        if FOLLOW_CENTER:
-            offset = calculate_offset(sim.gravity_center*SCALE)
+    running = True
+    def physics_calculator() -> None:
+        """
+        runs the physics calculations in a loop
+        """
+        nonlocal start
+        while running:
+            # calculate physics
+            now = time.perf_counter()
+            dt = now-start
+            if not PAUSE:
+                sim.iter((dt)*TIME_SCALE, gravity=GRAVITY, collision=COLLISION, precision=3)
+            start = now
 
-        # scale the simulation if enabled
-        if AUTO_SCALE:
-            tmp = calculate_scale(WINDOW_SIZE, sim.size)
-            SCALE = min(tmp, SCALE)
+    Thread(target=physics_calculator).start()
+    try:
+        while True:
+            # for FPS counter
+            now = time.perf_counter()
+            dt = now - start
+            start = now
 
-        # draw center of mass
-        gc = sim.gravity_center
-        gc_pos = gc.x * SCALE - offset.x, gc.y * SCALE - offset.y
-        pg.draw.circle(surface2, RED, gc_pos, 2)
+            # draw objects
+            screen.fill(BLACK)
+            surface0.fill(BLACK)
+            surface1.fill((0, 0, 0, 0))
+            surface2.fill((0, 0, 0, 0))
+            if FOLLOW_CENTER:
+                offset = calculate_offset(sim.gravity_center*SCALE)
 
-        # iterate objects and draw them
-        for element in sim.objects:
-            element: BasicObject | Planet
-            # calculate position and scale
-            pos = element.position.x*SCALE-offset.x, element.position.y*SCALE-offset.y
-            scale = element.mass*mass_scale_multiplier()*(SCALE/orig_scale)
-            scale = scale if scale > 1 else 1
+            # scale the simulation if enabled
+            if AUTO_SCALE:
+                tmp = calculate_scale(WINDOW_SIZE, sim.size)
+                SCALE = min(tmp, SCALE)
 
-            # if the object is a planet and REAL_DIAMETER is true,
-            # set the size of the sphere to the correct size
-            scale = scale
-            if type(element) == Planet and REAL_DIAMETER:
-                scale = (element.diameter/2) * SCALE
-                scale = 1 if scale < 1 else scale
+            # draw center of mass
+            gc = sim.gravity_center
+            gc_pos = gc.x * SCALE - offset.x, gc.y * SCALE - offset.y
+            pg.draw.circle(surface2, RED, gc_pos, 2)
 
-            # draw object
-            pg.draw.circle(surface1, WHITE, pos, scale)
+            # iterate objects and draw them
+            for element in sim.objects:
+                element: BasicObject | Planet
+                # calculate position and scale
+                pos = element.position.x*SCALE-offset.x, element.position.y*SCALE-offset.y
+                scale = element.mass*mass_scale_multiplier()*(SCALE/orig_scale)
+                scale = scale if scale > 1 else 1
 
-            # draw trace
-            if SHOW_TRACE:
-                for i, trace in enumerate(element.trace[-TRACE_LENGTH::]):
-                    pos = trace.x*SCALE-offset.x, trace.y*SCALE-offset.y
-                    pg.draw.circle(surface0, TRACE_COLOR+(i*(255/TRACE_LENGTH),), pos, 1)
+                # if the object is a planet and REAL_DIAMETER is true,
+                # set the size of the sphere to the correct size
+                scale = scale
+                if type(element) == Planet and REAL_DIAMETER:
+                    scale = (element.diameter/2) * SCALE
+                    scale = 1 if scale < 1 else scale
 
-            # draw center line
-            if SHOW_RADIUS:
-                gc_vec = Vector.from_cartesian(*gc_pos)
-                radius = gc_vec - Vector.from_cartesian(*pos)
-                pg.draw.line(surface0, DISTANCE_COLOR, gc_pos, pos)
-                r = font.render(f"r={round(radius.length/SCALE, 2)}m", True, DISTANCE_COLOR)
-                r_pos = gc_vec - radius/2
-                surface0.blit(r, (r_pos.x, r_pos.y))
+                # draw object
+                pg.draw.circle(surface1, WHITE, pos, scale)
 
-            # draw velocity label and direction
-            if SHOW_VELOCITY:
-                velocity = font.render(f"{round(element.velocity.length, 3)} m/s", True, BLUE)
-                surface0.blit(velocity, (pos[0]+scale, pos[1]-scale))
+                # draw trace
+                if SHOW_TRACE:
+                    for i, trace in enumerate(element.trace[-TRACE_LENGTH::]):
+                        pos = trace.x*SCALE-offset.x, trace.y*SCALE-offset.y
+                        pg.draw.circle(surface0, TRACE_COLOR+(i*(255/TRACE_LENGTH),), pos, 1)
 
-                tmp = Vector.from_polar(angle=element.velocity.angle, length=scale*2)
-                p2x = pos[0] + tmp.x
-                p2y = pos[1] + tmp.y
-                pg.draw.line(surface0, BLUE, pos, (p2x, p2y))
+                # draw center line
+                if SHOW_RADIUS:
+                    gc_vec = Vector.from_cartesian(*gc_pos)
+                    radius = gc_vec - Vector.from_cartesian(*pos)
+                    pg.draw.line(surface0, DISTANCE_COLOR, gc_pos, pos)
+                    r = font.render(f"r={round(radius.length/SCALE, 2)}m", True, DISTANCE_COLOR)
+                    r_pos = gc_vec - radius/2
+                    surface0.blit(r, (r_pos.x, r_pos.y))
 
-            # # draw name label
-            if type(element) == Planet and SHOW_NAMES:
-                name = font.render(element.name, True, RED)
-                surface0.blit(name, (pos[0]+scale, pos[1]+scale))
+                # draw velocity label and direction
+                if SHOW_VELOCITY:
+                    velocity = font.render(f"{round(element.velocity.length, 3)} m/s", True, BLUE)
+                    surface0.blit(velocity, (pos[0]+scale, pos[1]-scale))
 
-        # draw toggle infos
-        inf = [
-            f"FPS: {round(1/dt, 1)}",
-            f"Gravity: {GRAVITY}",
-            f"Collision: {COLLISION}",
-            f"scale: {SCALE}",
-            f"Auto-scale: {AUTO_SCALE}",
-            f"real Diameter: {REAL_DIAMETER}",
-            f"Pause: {PAUSE}",
-            f"Follow center: {FOLLOW_CENTER}",
-            f"show Velocity: {SHOW_VELOCITY}",
-            f"show Radius: {SHOW_RADIUS}",
-            f"show Trace: {SHOW_TRACE}",
-            f"show Names: {SHOW_NAMES}"
-        ]
+                    tmp = Vector.from_polar(angle=element.velocity.angle, length=scale*2)
+                    p2x = pos[0] + tmp.x
+                    p2y = pos[1] + tmp.y
+                    pg.draw.line(surface0, BLUE, pos, (p2x, p2y))
 
-        if SHOW_INFO:
-            for i, line in enumerate(inf):
-                img = font.render(line, True, WHITE)
-                surface2.blit(img, (0, 20*i))
+                # # draw name label
+                if type(element) == Planet and SHOW_NAMES:
+                    name = font.render(element.name, True, RED)
+                    surface0.blit(name, (pos[0]+scale, pos[1]+scale))
 
-        # handle pygame events
-        handle_pygame_events()
+            # draw toggle infos
+            inf = [
+                f"FPS: {round(1/dt, 1)}",
+                f"Gravity: {GRAVITY}",
+                f"Collision: {COLLISION}",
+                f"scale: {SCALE}",
+                f"Auto-scale: {AUTO_SCALE}",
+                f"real Diameter: {REAL_DIAMETER}",
+                f"Pause: {PAUSE}",
+                f"Follow center: {FOLLOW_CENTER}",
+                f"show Velocity: {SHOW_VELOCITY}",
+                f"show Radius: {SHOW_RADIUS}",
+                f"show Trace: {SHOW_TRACE}",
+                f"show Names: {SHOW_NAMES}"
+            ]
 
-        # update screen
-        screen.blit(surface0, (0, 0))
-        screen.blit(surface1, (0, 0))
-        screen.blit(surface2, (0, 0))
-        pg.display.update()
+            if SHOW_INFO:
+                for i, line in enumerate(inf):
+                    img = font.render(line, True, WHITE)
+                    surface2.blit(img, (0, 20*i))
+
+            # handle pygame events
+            handle_pygame_events()
+
+            # update screen
+            screen.blit(surface0, (0, 0))
+            screen.blit(surface1, (0, 0))
+            screen.blit(surface2, (0, 0))
+            pg.display.update()
+
+    finally:
+        running = False
 
 
 if __name__ == "__main__":
