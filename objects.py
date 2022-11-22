@@ -122,14 +122,14 @@ class Vector:
         if calc_from in ("p", "polar"):
             self.__x = np.cos(self.angle) * self.length
             self.__y = np.sin(self.angle) * self.length
+            return
 
         elif calc_from in ("c", "cartesian"):
             self.__length = np.sqrt(self.x**2 + self.y**2)
             self.__angle = np.arctan2(self.y, self.x)
             return
 
-        else:
-            raise ValueError("Invalid value for \"calc_from\"")
+        raise ValueError("Invalid value for \"calc_from\"")
 
     def __abs__(self) -> float:
         return np.sqrt(self.x**2 + self.y**2)
